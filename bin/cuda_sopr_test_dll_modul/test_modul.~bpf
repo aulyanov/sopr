@@ -1,0 +1,6 @@
+USEUNIT("..\test_cuda_dll\main.cpp");
+USE("..\test_cuda_dll\cuda_math.h", File);
+//---------------------------------------------------------------------------
+This file is used by the project manager only and should be treated like the project file
+
+main
