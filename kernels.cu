@@ -72,21 +72,18 @@ void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, con
  * result - передается полностью но заполняется в соответствии со слоем матрицы
  *
  * в целом метод надо вызывать несколько раз, перезаполняя слой матрицы
-
- *TO-DO: пока ничего не сделано (надо ли вообще)
-
  */
 
 void __global__ matrixPartOnVectorMultiplyKernel(rett *partA, rett *b, rett *result, const countt N, const countt partNumber, const countt partSize){
 	__shared__ rett res[THREADS_PER_BLOCK];
 
-	for(countt blStep = 0; blStep < N; blStep += gridDim.x){//!
+	for(countt blStep = 0; blStep < partSize; blStep += gridDim.x){//!
 		res[threadIdx.x] = 0;
 		countt block_i = blockIdx.x + blStep;
-		if ( (block_i) < N){
+		if (block_i < partSize){
 			for (countt thStep = 0; thStep < N; thStep += blockDim.x){
 				countt thread_j = threadIdx.x + thStep;
-				if ( (thread_j) < N){
+				if (thread_j < N){
 					res[threadIdx.x] += \
 						partA[ (block_i)*N + (thread_j) ] *\
 						b[ thread_j ];
@@ -104,7 +101,9 @@ void __global__ matrixPartOnVectorMultiplyKernel(rett *partA, rett *b, rett *res
 			n/=2;
 		}
 		if (threadIdx.x == 0){
-			result[blockIdx.x + blStep] = res[threadIdx.x];
+			result[ \
+				partSize*partNumber + blockIdx.x + blStep\
+			] = res[threadIdx.x];
 		}
 		__syncthreads();
 	}

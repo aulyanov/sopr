@@ -107,3 +107,48 @@ extern "C" __declspec(dllexport) float __stdcall matrixOnVectorMultiply(rett *A,
 	CUDA_CHECK_ERROR(cudaEventDestroy(stop));
 	return time;
 }
+
+extern "C" __declspec(dllexport) float __stdcall matrixPartOnVectorMultiply(rett *A, rett *b, rett *result,const countt N, const countt partNumber, const countt partSize){
+	//allocation memory on device
+	rett *devMatrixA;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devMatrixA, N*partSize*sizeof(rett)));
+	rett *devVector_b;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devVector_b, N*sizeof(rett)))
+	rett *devResult;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devResult, N*sizeof(rett)))
+	//initialization data on device
+	CUDA_CHECK_ERROR(cudaMemcpy(devMatrixA, A, N*partSize*sizeof(rett), cudaMemcpyHostToDevice));
+	CUDA_CHECK_ERROR(cudaMemcpy(devVector_b, b, N*sizeof(rett), cudaMemcpyHostToDevice));
+	CUDA_CHECK_ERROR(cudaMemcpy(devResult, result, N*sizeof(rett), cudaMemcpyHostToDevice));
+	//registration of events
+	cudaEvent_t start;
+    cudaEvent_t stop;
+	//create events to sync and get timeout
+	CUDA_CHECK_ERROR(cudaEventCreate(&start));
+	CUDA_CHECK_ERROR(cudaEventCreate(&stop));
+	//point of start GPU calc
+	cudaEventRecord(start, 0);
+	//init grid parametres
+	dim3 gridSize = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
+	dim3 blockSize = dim3(THREADS_PER_BLOCK, 1, 1);
+	//call of kernel
+	matrixPartOnVectorMultiplyKernel<<< gridSize, blockSize >>>(devMatrixA, devVector_b, devResult, N , partNumber, partSize);
+	//point of end calculation
+	cudaEventRecord(stop, 0);
+
+	float time = 0;
+	//sunc all threads
+    cudaEventSynchronize(stop);
+	//get execution time
+    cudaEventElapsedTime(&time, start, stop);
+	//copy from device
+	CUDA_CHECK_ERROR(cudaMemcpy(result, devResult, sizeof(rett)*N, cudaMemcpyDeviceToHost));
+	//free allocated GPU memory
+	CUDA_CHECK_ERROR(cudaFree(devMatrixA));
+	CUDA_CHECK_ERROR(cudaFree(devVector_b));
+	CUDA_CHECK_ERROR(cudaFree(devResult));
+	//destroy of events
+	CUDA_CHECK_ERROR(cudaEventDestroy(start));
+	CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+	return time;
+}

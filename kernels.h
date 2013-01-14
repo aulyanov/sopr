@@ -2,6 +2,8 @@
 #include <cstdio>
 #include "GlobalEntitys.h"
 
+#pragma once
+
 void __global__ copyKernel(rett *src, rett *dst, const int n);
 void __global__ multVectorOnSkalarKernel(rett *A, rett *k, const int N);
 
@@ -11,4 +13,4 @@ void __global__ skalarMultInSingleBlockKernel(rett *a_Mass, rett *b_Mass, rett *
 //myltiply matrix on vector (only less then total GRAM)
 void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, const countt N);
 //myltiply part of  matrix on vector (for part of a large matrix)
-void __global__ matrixPartOnVectorMultiplyKernel(rett *A, rett *b, rett *result, const countt N, const countt partNumber, const countt partSize);
+void __global__ matrixPartOnVectorMultiplyKernel(rett *partA, rett *b, rett *result, const countt N, const countt partNumber, const countt partSize);
