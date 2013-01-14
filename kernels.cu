@@ -1,20 +1,37 @@
 #include <cuda_runtime_api.h>
 #include "kernels.h"
 
-void __global__ copyKernel(rett *src, rett *dst, const int n){
-    int globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
-    if(globalIndex < n){
-        dst[globalIndex] = src[globalIndex];
-    }
+/*
+ * Копирует один массив в другой вне зависимости от размерности грида
+ */
+void __global__ copyKernel(rett *src, rett *dst, const countt N){
+    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+	countt count = (countt)(N/globalLimit);
+	countt index = globalIndex
+	for (countt pass = 0; pass < count; pass++ ){
+		dst[index] = src[index];
+		index += globalLimit;
+	}
+    if(index < N)
+        dst[index] = src[index];
 }
 
-void __global__ multVectorOnSkalarKernel(rett *A, rett *k, const int N){
-    int globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
-    if(globalIndex < N){
-        rett temp = A[globalIndex];
-        temp *= k[0];
-        A[globalIndex] = temp;
-    }
+void __global__ skalarMyltiplyKernel(rett* a, rett* b, rett* result, const countt N){
+    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+	countt count = N/globalLimit;
+
+	countt index = globalIndex
+	for (countt pass = 0; pass < count; pass++ ){
+		result[index] = a[index]*b[index];
+		index += globalLimit;
+	}
+    if(index < N)
+        result[index] = a[index]*b[index];
+	/*
+	TODO: reduction?
+	*/
 }
 
 void __global__ skalarMultInSingleBlockKernel(rett *a_Global, rett *b_Global, rett *res_Single, const int N_Global){

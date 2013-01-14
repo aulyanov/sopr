@@ -16,6 +16,11 @@
 using namespace std;
 
 int main(int argc, char* argv[]) {
+int t = 4;
+for(t = 0; t < 5; t++){
+        std::cerr << t << endl;
+}
+std::cerr << t << "<-" << endl;
 
         rett symA[7*7] = {
 		9.0 ,  0.0 , 0.0 , 3.0 , 1.0 , 0.0 , 1.0 ,
@@ -31,42 +36,46 @@ int main(int argc, char* argv[]) {
 
         //_matrixOnVectorMultiply@16
 
-        typedef float (__stdcall *matrixOnVectorMultiply) (rett *A, rett *b, rett *result,countt N);
+        typedef float (__stdcall *matrixOnVectorMultiply) (rett *A, rett *b, rett *result,countt N, countt partNumber, countt partSize);
         matrixOnVectorMultiply matrixOnVectorMultiplyEx;
 
         HMODULE lib = NULL;
         lib = LoadLibrary("../sopr.dll");
 	if(lib){
           std::cerr << "Load libr\n";
-          matrixOnVectorMultiplyEx = (matrixOnVectorMultiply)GetProcAddress(lib,"_matrixOnVectorMultiply@16");
+          matrixOnVectorMultiplyEx = (matrixOnVectorMultiply)GetProcAddress(lib,"_matrixPartOnVectorMultiply@24");
 
           if (matrixOnVectorMultiplyEx){
             std::cerr << "Find func\n";
 
-//for (countt p = 17929; p < 17934; p+=1 ){
-for (countt p = 18000; p < 19000; p+=100 ){  // out of memoru
-        countt N = p;
+
+        countt count = 20;
+        countt partSize = 1024;
+        countt N = count*partSize;
         std::cerr << N << endl;
-        rett *A = new rett[N*N];
+        rett *A = new rett[N*partSize];
         rett *b = new rett[N];
         rett *result = new rett[N];
-
-        rett cons = rand();
+        
         for (countt i = 0; i < N; i++){
-
-          b[i] = cons;
+          b[i] = -1;
           result[i] = 0;
+        }
+        for (int i = 0; i < partSize; i++){
           for (countt j = 0; j < N; j++){
             A[i*N + j] = 1;
           }
         }
+for (int pn = 0; pn < count; pn++){
 
-            time = matrixOnVectorMultiplyEx(A,b,result,N);
-            std::cerr << "exec time(milliseconds):" << time << "; result[0]=" << result[0] << "; result[N-1]=" << result[N-1] << endl;
+        time = matrixOnVectorMultiplyEx(A,b,result,N,pn,partSize);
+        int ppp = (pn + 1)*partSize + 1;
+        std::cerr << "exec time(milliseconds):" << time << "; " << result[0] << "; " << result[partSize*(pn + 1 ) - 1] << "; " << result[N-1] << endl;
+}
         delete [] A;
         delete [] b;
         delete [] result;
-}
+
           }
         }
         FreeLibrary(lib);
