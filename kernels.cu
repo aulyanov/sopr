@@ -8,7 +8,7 @@ void __global__ copyKernel(rett *src, rett *dst, const countt N){
     countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
 	countt globalLimit = gridDim.x*blockDim.x;
 	countt count = (countt)(N/globalLimit);
-	countt index = globalIndex
+	countt index = globalIndex;
 	for (countt pass = 0; pass < count; pass++ ){
 		dst[index] = src[index];
 		index += globalLimit;
@@ -17,36 +17,73 @@ void __global__ copyKernel(rett *src, rett *dst, const countt N){
         dst[index] = src[index];
 }
 
-void __global__ skalarMyltiplyKernel(rett* a, rett* b, rett* result, const countt N){
-    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
-	countt globalLimit = gridDim.x*blockDim.x;
-	countt count = N/globalLimit;
+/*
+ * Скалярное произведение с частичным суммированием
+ * В выходной массив размерности равной размерности грида пишется частично просуммированный ряд
+ * !!! обязательно просуммировать оставшуюся часть (редукция или процессор?)
+ * при формировании грида желательно уменьшить колличество блоков (выходной массив будет короче)
+ */
+void __global__ multiplyVectorsAndPartialSumKernel(rett* a, rett* b, rett* resultAfterReductionGridSize, const countt N){
 
-	countt index = globalIndex
+	countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+	countt count = (countt)(N/globalLimit);
+	rett __shared__ result[THREADS_PER_BLOCK];
+
+	result[threadIdx.x] = 0;
+
+	countt index = globalIndex;
 	for (countt pass = 0; pass < count; pass++ ){
-		result[index] = a[index]*b[index];
+		result[threadIdx.x] += a[index]*b[index];
 		index += globalLimit;
 	}
+
     if(index < N)
-        result[index] = a[index]*b[index];
-	/*
-	TODO: reduction?
-	*/
+        result[threadIdx.x] += a[index]*b[index];
+
+	__syncthreads();
+	//reduction of block part
+	int n = blockDim.x/2;
+	while(n != 0){
+		if (threadIdx.x < n){
+			result[threadIdx.x] += result[threadIdx.x + n];
+		}
+		__syncthreads();
+		n/=2;
+	}
+	//writing to output part
+	if (threadIdx.x == 0)
+		resultAfterReductionGridSize[blockIdx.x] = result[0];
+
 }
 
-void __global__ skalarMultInSingleBlockKernel(rett *a_Global, rett *b_Global, rett *res_Single, const int N_Global){
-    /*const int cache_size = SHARED_MEMORY_SIZE_BYTE/sizeof(rett);
-    __shared__ rett cache_res[cache_size];
-    
-    int countOfGlobalLoad = (int)((N_Mass + cache_size - 1)/cache_size);
-    int count = 0;
-    while (count < countOfGlobalLoad){
-		for(int i = 0; i < cache_size; i++){
-			cache_a[i] = a_Global[count];
+/*
+ * Запускать только на 1м блоке
+ * В рамках одного блока суммирует небольшие ряды
+ */
+void __global__ reductionSumAtSingleBlockKernel(rett *input, rett *rScalar, const countt n){
+	rett __shared__ result[THREADS_PER_BLOCK];
+	result[threadIdx.x] = 0;
+
+	for(countt indexAdd = 0; indexAdd < n; indexAdd += blockDim.x){
+		countt index = threadIdx.x + indexAdd;
+		if ( index < n ){
+			result[threadIdx.x] += input[index];
 		}
-		count ++;
-    }
-    (*res_Single) = 0;*/
+	}
+	__syncthreads();
+
+	int m = blockDim.x/2;
+	while(m != 0){
+		if (threadIdx.x < m){
+			result[threadIdx.x] += result[threadIdx.x + m];
+		}
+		__syncthreads();
+		m/=2;
+	}
+
+	if (threadIdx.x == 0)
+		rScalar[0] = result[0];
 }
 
 void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, const countt N){

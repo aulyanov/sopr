@@ -31,46 +31,34 @@ int main(int argc, char* argv[]) {
 
         //_matrixOnVectorMultiply@16
 
-        typedef float (__stdcall *matrixOnVectorMultiply) (rett *A, rett *b, rett *result,countt N, countt partNumber, countt partSize);
-        matrixOnVectorMultiply matrixOnVectorMultiplyEx;
+        typedef float (__stdcall *skalarMultiply) (rett *a, rett *b, rett *result,const countt N);
+        skalarMultiply skalarMultiplyEx;
 
         HMODULE lib = NULL;
         lib = LoadLibrary("../sopr.dll");
 	if(lib){
           std::cerr << "Load libr\n";
-          matrixOnVectorMultiplyEx = (matrixOnVectorMultiply)GetProcAddress(lib,"_matrixPartOnVectorMultiply@24");
+          skalarMultiplyEx = (skalarMultiply)GetProcAddress(lib,"_skalarMultiply@16");
 
-          if (matrixOnVectorMultiplyEx){
+          if (skalarMultiplyEx){
             std::cerr << "Find func\n";
+            countt N = 1000000;
+            std::cerr << "N = " << N << endl;
 
+            rett *a = new rett[N];
+            rett *b = new rett[N];
 
-        countt count = 20;
-        countt partSize = 1024;
-        countt N = count*partSize;
-        std::cerr << N << endl;
-        rett *A = new rett[N*partSize];
-        rett *b = new rett[N];
-        rett *result = new rett[N];
-        
-        for (countt i = 0; i < N; i++){
-          b[i] = -1;
-          result[i] = 0;
-        }
-        for (int i = 0; i < partSize; i++){
-          for (countt j = 0; j < N; j++){
-            A[i*N + j] = 1;
-          }
-        }
-for (int pn = 0; pn < count; pn++){
+            rett *res = new rett();
+            (*res) = 0;
+            for (int i = 0; i < N; i++ ){
+              rett p = (rett)i;
+              a[i] = p/N;
+              b[i] = -1;
+            }
 
-        time = matrixOnVectorMultiplyEx(A,b,result,N,pn,partSize);
-        int ppp = (pn + 1)*partSize + 1;
-        std::cerr << "exec time(milliseconds):" << time << "; " << result[0] << "; " << result[partSize*(pn + 1 ) - 1] << "; " << result[N-1] << endl;
-}
-        delete [] A;
-        delete [] b;
-        delete [] result;
-
+            time = skalarMultiplyEx(a,b,res,N);
+            
+            std::cerr << "timeout = " << time << "; res = " << (*res) << endl;
           }
         }
         FreeLibrary(lib);
