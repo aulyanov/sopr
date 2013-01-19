@@ -17,6 +17,19 @@ void __global__ copyKernel(rett *src, rett *dst, const countt N){
         dst[index] = src[index];
 }
 
+void __global__ myltiplyVectorOnScalarKernel(rett *v, rett *scalar,rett *result, const countt N){
+    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+	countt count = (countt)(N/globalLimit);
+	countt index = globalIndex;
+	for (countt pass = 0; pass < count; pass++ ){
+		result[index] = (*scalar)*v[index];
+		index += globalLimit;
+	}
+    if(index < N)
+        result[index] = (*scalar)*v[index];
+}
+
 /*
  * Скалярное произведение с частичным суммированием
  * В выходной массив размерности равной размерности грида пишется частично просуммированный ряд
@@ -84,6 +97,21 @@ void __global__ reductionSumAtSingleBlockKernel(rett *input, rett *rScalar, cons
 
 	if (threadIdx.x == 0)
 		rScalar[0] = result[0];
+}
+
+void __global__ stripMatrixOnVectorMultiplyKernel(rett *stripA, rett *b, rett *result,const countt N, const countt B){
+	rett blockResult = 0;
+	countt BB = B + 1;
+	countt I = blockIdx.x;
+	for (countt I = blockIdx.x; I < N; I += gridDim.x) {
+		blockResult += stripA[I*BB + B]*b[I];
+		for (countt k = 1; k <= B; k++){
+			blockResult += stripA[I*BB + B - k]*b[I - k];
+			blockResult += stripA[(I + k)*BB + B - k]*b[I + k];
+		}
+		result[I] = blockResult;
+		blockResult = 0;
+	}
 }
 
 void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, const countt N){

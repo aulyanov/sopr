@@ -18,12 +18,21 @@ if (err != cudaSuccess) {          \
 
 #endif
 
-extern "C" __declspec(dllexport) void  __stdcall ups();
-extern "C" __declspec(dllexport) float __stdcall methodSoprGrad(rett *A, rett *b, rett *x,const int col, rett e);
+//Elementary math function
 extern "C" __declspec(dllexport) float __stdcall skalarMultiply(rett *a, rett *b, rett *result,const countt N);
 extern "C" __declspec(dllexport) float __stdcall matrixOnVectorMultiply(rett *A, rett *b, rett *result, const countt N);
 extern "C" __declspec(dllexport) float __stdcall matrixPartOnVectorMultiply(rett *A, rett *b, rett *result,const countt N, const countt partNumber, const countt partSize);
+extern "C" __declspec(dllexport) float __stdcall myltiplyVectorOnScalar(rett *v, rett *scalar,rett *result, const countt N);
 
+//advaced math methods
+extern "C" __declspec(dllexport) float __stdcall methodConjugateGradient(rett *matrixA, \
+																		 rett *vectorB, \
+																		 rett *vectorX, \
+																		 const countt N, \ /* размерность матрицы*/
+																		 const countt B \  /* размер полуленты*/
+																		 );
+
+//info
 extern "C" __declspec(dllexport) float __stdcall getDeviceInfo(DeviceInfo &dc);
 
 template<class T> T min(T &arg1, T &arg2){

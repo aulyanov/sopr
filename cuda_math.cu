@@ -2,10 +2,6 @@
 #include "cuda_math.h"
 #include "kernels.h"
 
-extern "C" __declspec(dllexport) void __stdcall ups(){
-  printf("ups!\n");
-}
-
 extern "C" __declspec(dllexport) float __stdcall getDeviceInfo(DeviceInfo &di){
     printf("Execution getDeviceInfo->\n");
 	int deviceCount;
@@ -54,9 +50,49 @@ extern "C" __declspec(dllexport) float __stdcall getDeviceInfo(DeviceInfo &di){
     return 0;
 }
 
-extern "C" __declspec(dllexport) float __stdcall methodSoprGrad(rett *A, rett *b, rett *x, int col, rett e){
-    printf("Execution sopr gradient->\n");
-    return 0;
+
+extern "C" __declspec(dllexport) float __stdcall stripMatrixOnVectorMultiply(rett *stripA, rett *b, rett *result,const countt N, const countt B){
+	//allocation memory on device
+	rett *devStripMatrixA;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devStripMatrixA, N*(2*B + 1)*sizeof(rett)));
+	rett *devVector_b;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devVector_b, N*sizeof(rett)))
+	rett *devResult;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devResult, N*sizeof(rett)))
+	//initialization data on device
+	CUDA_CHECK_ERROR(cudaMemcpy(devStripMatrixA, A, N*(2*B + 1)*sizeof(rett), cudaMemcpyHostToDevice));
+	CUDA_CHECK_ERROR(cudaMemcpy(devVector_b, b, N*sizeof(rett), cudaMemcpyHostToDevice));
+	//registration of events
+	cudaEvent_t start;
+    cudaEvent_t stop;
+	//create events to sync and get timeout
+	CUDA_CHECK_ERROR(cudaEventCreate(&start));
+	CUDA_CHECK_ERROR(cudaEventCreate(&stop));
+	//point of start GPU calc
+	cudaEventRecord(start, 0);
+	//init grid parametres
+	dim3 gridSizeForStripMatrixMult = dim3(MAX_BLOCKS, 1, 1);
+	dim3 blockSizeForStripMatrixMult = dim3(1, 1, 1);
+	//call of kernel
+	stripMatrixOnVectorMultiplyKernel<<< gridSizeForStripMatrixMult, blockSizeForStripMatrixMult >>>(devStripMatrixA, devVector_b, devResult, N, B);
+	//point of end calculation
+	cudaEventRecord(stop, 0);
+
+	float time = 0;
+	//sunc all threads
+    cudaEventSynchronize(stop);
+	//get execution time
+    cudaEventElapsedTime(&time, start, stop);
+	//copy from device
+	CUDA_CHECK_ERROR(cudaMemcpy(result, devResult, sizeof(rett)*N, cudaMemcpyDeviceToHost));
+	//free allocated GPU memory
+	CUDA_CHECK_ERROR(cudaFree(devStripMatrixA));
+	CUDA_CHECK_ERROR(cudaFree(devVector_b));
+	CUDA_CHECK_ERROR(cudaFree(devResult));
+	//destroy of events
+	CUDA_CHECK_ERROR(cudaEventDestroy(start));
+	CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+	return time;
 }
 
 extern "C" __declspec(dllexport) float __stdcall matrixOnVectorMultiply(rett *A, rett *b, rett *result,const countt N){
@@ -200,5 +236,61 @@ extern "C" __declspec(dllexport) float __stdcall skalarMultiply(rett *a, rett *b
 	//destroy of events
 	CUDA_CHECK_ERROR(cudaEventDestroy(start));
 	CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+	return time;
+}
+
+extern "C" __declspec(dllexport) float __stdcall myltiplyVectorOnScalar(rett *v, rett *scalar,rett *result, const countt N){
+	//allocation memory on device
+	rett *devVector;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devVector, N*sizeof(rett)));
+	rett *devResultVector;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devResultVector, N*sizeof(rett)));
+	rett *devScalar;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devScalar, sizeof(rett)));
+	//initialization data on device
+	CUDA_CHECK_ERROR(cudaMemcpy(devVector, v, N*sizeof(rett), cudaMemcpyHostToDevice));
+	CUDA_CHECK_ERROR(cudaMemcpy(devScalar, scalar, sizeof(rett), cudaMemcpyHostToDevice));
+	//registration of events
+	cudaEvent_t start;
+    cudaEvent_t stop;
+	//create events to sync and get timeout
+	CUDA_CHECK_ERROR(cudaEventCreate(&start));
+	CUDA_CHECK_ERROR(cudaEventCreate(&stop));
+	//point of start GPU calc
+	cudaEventRecord(start, 0);
+	//init grid parametres on Step 1
+	dim3 gridSizeStep = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
+	dim3 blockSizeStep = dim3(THREADS_PER_BLOCK, 1, 1);
+	//call of kernel
+	myltiplyVectorOnScalarKernel<<< gridSizeStep, blockSizeStep >>>(devVector, devScalar, devResultVector, N);
+	//init grid parametres on Step 2
+	cudaEventRecord(stop, 0);
+
+	float time = 0;
+	//sunc all threads
+    cudaEventSynchronize(stop);
+	//get execution time
+    cudaEventElapsedTime(&time, start, stop);
+	//copy from device
+
+	CUDA_CHECK_ERROR(cudaMemcpy(result, devResultVector, N*sizeof(rett), cudaMemcpyDeviceToHost));
+	//free allocated GPU memory
+	CUDA_CHECK_ERROR(cudaFree(devVector));
+	CUDA_CHECK_ERROR(cudaFree(devScalar));
+	CUDA_CHECK_ERROR(cudaFree(devResultVector));
+	//destroy of events
+	CUDA_CHECK_ERROR(cudaEventDestroy(start));
+	CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+	return time;
+}
+
+extern "C" __declspec(dllexport) float __stdcall methodConjugateGradient(rett *matrixA, \
+																		 rett *vectorB, \
+																		 rett *vectorX, \
+																		 const countt N, \ /* размерность матрицы*/
+																		 const countt B \  /* размер полуленты*/
+																		 )
+{
+	float time = 0;
 	return time;
 }
