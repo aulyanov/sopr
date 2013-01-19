@@ -31,34 +31,33 @@ int main(int argc, char* argv[]) {
 
         //_matrixOnVectorMultiply@16
 
-        typedef float (__stdcall *skalarMultiply) (rett *a, rett *b, rett *result,const countt N);
-        skalarMultiply skalarMultiplyEx;
+        typedef float (__stdcall *myltiplyVectorOnScalar) (rett *a, rett *b, rett *result,const countt N);
+        myltiplyVectorOnScalar myltiplyVectorOnScalarEx;
 
         HMODULE lib = NULL;
         lib = LoadLibrary("../sopr.dll");
 	if(lib){
           std::cerr << "Load libr\n";
-          skalarMultiplyEx = (skalarMultiply)GetProcAddress(lib,"_skalarMultiply@16");
+          myltiplyVectorOnScalarEx = (myltiplyVectorOnScalar)GetProcAddress(lib,"_myltiplyVectorOnScalar@16");
 
-          if (skalarMultiplyEx){
+          if (myltiplyVectorOnScalarEx){
             std::cerr << "Find func\n";
             countt N = 1000000;
             std::cerr << "N = " << N << endl;
 
             rett *a = new rett[N];
-            rett *b = new rett[N];
-
-            rett *res = new rett();
-            (*res) = 0;
+            rett *res = new rett[N];
+            rett *k = new rett();
+            (*k) = -1.47;
             for (int i = 0; i < N; i++ ){
               rett p = (rett)i;
-              a[i] = p/N;
-              b[i] = -1;
+              a[i] = -2;
+              res[i] = 0;
             }
 
-            time = skalarMultiplyEx(a,b,res,N);
-            
-            std::cerr << "timeout = " << time << "; res = " << (*res) << endl;
+            time = myltiplyVectorOnScalarEx(a,k,res,N);
+
+            std::cerr << "timeout = " << time << "; res[N-1] = " << res[N-1] << endl;
           }
         }
         FreeLibrary(lib);

@@ -60,7 +60,7 @@ extern "C" __declspec(dllexport) float __stdcall stripMatrixOnVectorMultiply(ret
 	rett *devResult;
 		CUDA_CHECK_ERROR(cudaMalloc((void**)&devResult, N*sizeof(rett)))
 	//initialization data on device
-	CUDA_CHECK_ERROR(cudaMemcpy(devStripMatrixA, A, N*(2*B + 1)*sizeof(rett), cudaMemcpyHostToDevice));
+	CUDA_CHECK_ERROR(cudaMemcpy(devStripMatrixA, stripA, N*(2*B + 1)*sizeof(rett), cudaMemcpyHostToDevice));
 	CUDA_CHECK_ERROR(cudaMemcpy(devVector_b, b, N*sizeof(rett), cudaMemcpyHostToDevice));
 	//registration of events
 	cudaEvent_t start;
@@ -71,8 +71,8 @@ extern "C" __declspec(dllexport) float __stdcall stripMatrixOnVectorMultiply(ret
 	//point of start GPU calc
 	cudaEventRecord(start, 0);
 	//init grid parametres
-	dim3 gridSizeForStripMatrixMult = dim3(MAX_BLOCKS, 1, 1);
-	dim3 blockSizeForStripMatrixMult = dim3(1, 1, 1);
+	dim3 gridSizeForStripMatrixMult = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
+	dim3 blockSizeForStripMatrixMult = dim3(THREADS_PER_BLOCK, 1, 1);
 	//call of kernel
 	stripMatrixOnVectorMultiplyKernel<<< gridSizeForStripMatrixMult, blockSizeForStripMatrixMult >>>(devStripMatrixA, devVector_b, devResult, N, B);
 	//point of end calculation
@@ -284,13 +284,7 @@ extern "C" __declspec(dllexport) float __stdcall myltiplyVectorOnScalar(rett *v,
 	return time;
 }
 
-extern "C" __declspec(dllexport) float __stdcall methodConjugateGradient(rett *matrixA, \
-																		 rett *vectorB, \
-																		 rett *vectorX, \
-																		 const countt N, \ /* размерность матрицы*/
-																		 const countt B \  /* размер полуленты*/
-																		 )
-{
+extern "C" __declspec(dllexport) float __stdcall methodConjugateGradient(rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B){
 	float time = 0;
 	return time;
 }

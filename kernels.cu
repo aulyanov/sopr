@@ -100,17 +100,17 @@ void __global__ reductionSumAtSingleBlockKernel(rett *input, rett *rScalar, cons
 }
 
 void __global__ stripMatrixOnVectorMultiplyKernel(rett *stripA, rett *b, rett *result,const countt N, const countt B){
-	rett blockResult = 0;
+	rett __shared__ blockResult[THREADS_PER_BLOCK];
 	countt BB = B + 1;
-	countt I = blockIdx.x;
-	for (countt I = blockIdx.x; I < N; I += gridDim.x) {
-		blockResult += stripA[I*BB + B]*b[I];
+	countt globalLimit = gridDim.x*blockDim.x;
+	for (countt I = blockIdx.x*(THREADS_PER_BLOCK) + threadIdx.x; I < N; I += globalLimit) {
+		blockResult[threadIdx.x] = stripA[I*BB + B]*b[I];
 		for (countt k = 1; k <= B; k++){
-			blockResult += stripA[I*BB + B - k]*b[I - k];
-			blockResult += stripA[(I + k)*BB + B - k]*b[I + k];
+			blockResult[threadIdx.x] += stripA[I*BB + B - k]*b[I - k];
+			blockResult[threadIdx.x] += stripA[(I + k)*BB + B - k]*b[I + k];
 		}
-		result[I] = blockResult;
-		blockResult = 0;
+
+		result[I] = blockResult[threadIdx.x];
 	}
 }
 
