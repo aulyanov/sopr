@@ -16,13 +16,8 @@
 using namespace std;
 
 int main(int argc, char* argv[]) {
-int t = 4;
-for(t = 0; t < 5; t++){
-        std::cerr << t << endl;
-}
-std::cerr << t << "<-" << endl;
 
-        rett symA[7*7] = {
+        rett symAo[7*7] = {
 		9.0 ,  0.0 , 0.0 , 3.0 , 1.0 , 0.0 , 1.0 ,
 		0.0 ,  11.0, 2.0 , 1.0 , 5.0 , 0.0 , 2.0 ,
 		0.0 ,  2.0 , 10.0 , 2.0 , -7.0 , 0.0 , 0.0 ,
@@ -32,50 +27,65 @@ std::cerr << t << "<-" << endl;
 		1.0 ,  2.0 ,  0.0 ,  0.0 ,  1.0  , 0.0 ,  80.0
 	};
 
+        rett symA[7*7] = {
+		9.0 ,  0.0 , 0.0  ,  0.0 ,   0.0 , 0.0 ,  0.0 ,
+	        0.0 ,  11.0, 2.0  ,  1.0 ,   0.0 , 0.0 ,  0.0 ,
+		0.0 ,  2.0 , 10.0 ,  2.0 ,  -7.0 , 0.0 ,  0.0 ,
+		0.0 ,  1.0 ,  2.0 ,  9.0 ,  1.0  , 0.0 ,  0.0 ,
+		0.0 ,  0.0 , -7.0 ,  1.0 ,  12.0 , 0.0 ,  0.0 ,
+		0.0 ,  0.0 ,  0.0 ,  0.0 ,   0.0 , 8.0 ,  0.0 ,
+		0.0 ,  0.0 ,  0.0 ,  0.0 ,   0.0 , 0.0 , 80.0
+	};
+
+        rett ssymA[7*3] = {
+		0.0 ,  0.0 , 9.0 ,
+                0.0 ,  0.0 , 11.0 ,
+                0.0 ,  2.0 , 10.0 ,
+                1.0 ,  2.0 , 9.0 ,
+               -7.0 ,  1.0 , 12.0 ,
+                0.0 ,  0.0 , 8.0 ,
+                0.0 ,  0.0 , 80.0
+	};
+
         float time = 0;
 
-        //_matrixOnVectorMultiply@16
-
-        typedef float (__stdcall *matrixOnVectorMultiply) (rett *A, rett *b, rett *result,countt N, countt partNumber, countt partSize);
-        matrixOnVectorMultiply matrixOnVectorMultiplyEx;
+        typedef float (__stdcall *methodConjugateGradientForStripMatrix) (rett *matrixA, rett *vectorB, rett *vectorX, const countt N, rett eps);
+        methodConjugateGradientForStripMatrix methodConjugateGradientForStripMatrixEx;
 
         HMODULE lib = NULL;
         lib = LoadLibrary("../sopr.dll");
 	if(lib){
           std::cerr << "Load libr\n";
-          matrixOnVectorMultiplyEx = (matrixOnVectorMultiply)GetProcAddress(lib,"_matrixPartOnVectorMultiply@24");
+          methodConjugateGradientForStripMatrixEx = (methodConjugateGradientForStripMatrix)GetProcAddress(lib,"_methodConjugateGradient@20");
 
-          if (matrixOnVectorMultiplyEx){
+          if (methodConjugateGradientForStripMatrixEx){
             std::cerr << "Find func\n";
 
+int o;
+            countt N = 7;
+//            countt N = 1000;
+            countt B = 2;
+            std::cerr << "N = " << N << endl;
 
-        countt count = 20;
-        countt partSize = 1024;
-        countt N = count*partSize;
-        std::cerr << N << endl;
-        rett *A = new rett[N*partSize];
-        rett *b = new rett[N];
-        rett *result = new rett[N];
-        
-        for (countt i = 0; i < N; i++){
-          b[i] = -1;
-          result[i] = 0;
-        }
-        for (int i = 0; i < partSize; i++){
-          for (countt j = 0; j < N; j++){
-            A[i*N + j] = 1;
-          }
-        }
-for (int pn = 0; pn < count; pn++){
-
-        time = matrixOnVectorMultiplyEx(A,b,result,N,pn,partSize);
-        int ppp = (pn + 1)*partSize + 1;
-        std::cerr << "exec time(milliseconds):" << time << "; " << result[0] << "; " << result[partSize*(pn + 1 ) - 1] << "; " << result[N-1] << endl;
-}
-        delete [] A;
-        delete [] b;
-        delete [] result;
-
+            rett *x = new rett[N];
+            rett *b = new rett[N];
+            rett eps = 0.00001;
+            for (int i = 0; i < N; i++ ){
+              x[i] = 1;
+              b[i] = N/(i + 1);
+            }
+//std::cin >> o;
+            rett * matrix = &symAo[0];
+            time = methodConjugateGradientForStripMatrixEx(matrix,b,x,N, eps);
+//std::cin >> o;
+            std::cerr << "timeout (ms):" << time << std::endl << std::endl;
+            for (int i = 0; i < N; i++){
+              rett p = 0;
+              for (int j = 0; j < N; j++){
+                p += matrix[i*N + j ]*x[j];
+              }
+              std::cerr << "b[ " << i << " ] = " << b[i] << " ; b'[ " << i << " ] = " << p << "; x = << " << x[i] << "\n";
+            }
           }
         }
         FreeLibrary(lib);

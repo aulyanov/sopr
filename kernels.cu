@@ -17,6 +17,53 @@ void __global__ copyKernel(rett *src, rett *dst, const countt N){
         dst[index] = src[index];
 }
 
+//error X = F(X) ????
+void __global__ xPlusAlfaYKernel(rett *X, rett *Y, rett* aScalar,rett *result, const countt N){
+    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+
+	countt count = (countt)(N/globalLimit);
+	countt index = globalIndex;
+	rett a = (*aScalar);
+	for (countt pass = 0; pass < count; pass++ ){
+		rett temp =  a*Y[index] + X[index];
+		result[index] = temp;
+		index += globalLimit;
+	}
+	
+	if(index < N){
+        rett temp =  a*Y[index] + X[index];
+		result[index] = temp;
+	}
+}
+
+void __global__ xMinusAlfaYKernel(rett *X, rett *Y, rett* aScalar,rett *result, const countt N){
+    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+	countt count = (countt)(N/globalLimit);
+	rett a = (*aScalar);
+	countt index = globalIndex;
+	for (countt pass = 0; pass < count; pass++ ){
+		result[index] = X[index] - a*Y[index];
+		index += globalLimit;
+	}
+    if(index < N)
+        result[index] = X[index] - a*Y[index];
+}
+
+void __global__ xSubYKernel(rett *X, rett *Y,rett *result, const countt N){
+    countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
+	countt globalLimit = gridDim.x*blockDim.x;
+	countt count = (countt)(N/globalLimit);
+	countt index = globalIndex;
+	for (countt pass = 0; pass < count; pass++ ){
+		result[index] = X[index] - Y[index];
+		index += globalLimit;
+	}
+    if(index < N)
+        result[index] = X[index] - Y[index];
+}
+
 void __global__ myltiplyVectorOnScalarKernel(rett *v, rett *scalar,rett *result, const countt N){
     countt globalIndex = threadIdx.x + blockIdx.x*blockDim.x;
 	countt globalLimit = gridDim.x*blockDim.x;
@@ -99,6 +146,37 @@ void __global__ reductionSumAtSingleBlockKernel(rett *input, rett *rScalar, cons
 		rScalar[0] = result[0];
 }
 
+/*
+ * Запускать только на 1м блоке
+ * В рамках одного блока суммирует небольшие ряды
+ * Делит результат на divScalar
+ */
+void __global__ reductionSumAtSingleBlockSpecialKernelWithDivide(rett *input, rett *rScalar, const countt n, rett *divScalar){
+	rett __shared__ result[THREADS_PER_BLOCK];
+	result[threadIdx.x] = 0;
+
+	for(countt indexAdd = 0; indexAdd < n; indexAdd += blockDim.x){
+		countt index = threadIdx.x + indexAdd;
+		if ( index < n ){
+			result[threadIdx.x] += input[index];
+		}
+	}
+	__syncthreads();
+
+	int m = blockDim.x/2;
+	while(m > 0){
+		if (threadIdx.x < m){
+			result[threadIdx.x] += result[threadIdx.x + m];
+		}
+		__syncthreads();
+		m/=2;
+	}
+
+	if (threadIdx.x == 0){
+		(*rScalar) = result[0]/(*divScalar);
+	}
+}
+
 void __global__ stripMatrixOnVectorMultiplyKernel(rett *stripA, rett *b, rett *result,const countt N, const countt B){
 	rett __shared__ blockResult[THREADS_PER_BLOCK];
 	countt BB = B + 1;
@@ -107,7 +185,8 @@ void __global__ stripMatrixOnVectorMultiplyKernel(rett *stripA, rett *b, rett *r
 		blockResult[threadIdx.x] = stripA[I*BB + B]*b[I];
 		for (countt k = 1; k <= B; k++){
 			blockResult[threadIdx.x] += stripA[I*BB + B - k]*b[I - k];
-			blockResult[threadIdx.x] += stripA[(I + k)*BB + B - k]*b[I + k];
+			if ((I + k) < N)
+				blockResult[threadIdx.x] += stripA[(I + k)*BB + B - k]*b[I + k];
 		}
 
 		result[I] = blockResult[threadIdx.x];

@@ -39,7 +39,7 @@
     <PFLAGS value="-$Y- -$L- -$D- -v -JPHNE -M"/>
     <RFLAGS value=""/>
     <AFLAGS value="/mx /w2 /zn"/>
-    <LFLAGS value="-D&quot;&quot; -ap -Tpe -x -Gn"/>
+    <LFLAGS value="-D&quot;&quot; -H:0x1000000 -Hc:0x1000000 -S:0x1000000 -Sc:0x1000000 -ap -Tpe -x -Gn"/>
   </OPTIONS>
   <LINKER>
     <ALLOBJ value="c0x32.obj sysinit.obj $(OBJFILES)"/>
