@@ -177,16 +177,16 @@ void __global__ reductionSumAtSingleBlockSpecialKernelWithDivide(rett *input, re
 	}
 }
 
-void __global__ stripMatrixOnVectorMultiplyKernel(rett *stripA, rett *b, rett *result,const countt N, const countt B){
+void __global__ bandMatrixOnVectorMultiplyKernel(rett *bandA, rett *b, rett *result,const countt N, const countt B){
 	rett __shared__ blockResult[THREADS_PER_BLOCK];
 	countt BB = B + 1;
 	countt globalLimit = gridDim.x*blockDim.x;
 	for (countt I = blockIdx.x*(THREADS_PER_BLOCK) + threadIdx.x; I < N; I += globalLimit) {
-		blockResult[threadIdx.x] = stripA[I*BB + B]*b[I];
+		blockResult[threadIdx.x] = bandA[I*BB + B]*b[I];
 		for (countt k = 1; k <= B; k++){
-			blockResult[threadIdx.x] += stripA[I*BB + B - k]*b[I - k];
+			blockResult[threadIdx.x] += bandA[I*BB + B - k]*b[I - k];
 			if ((I + k) < N)
-				blockResult[threadIdx.x] += stripA[(I + k)*BB + B - k]*b[I + k];
+				blockResult[threadIdx.x] += bandA[(I + k)*BB + B - k]*b[I + k];
 		}
 
 		result[I] = blockResult[threadIdx.x];

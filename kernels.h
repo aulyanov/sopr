@@ -21,7 +21,7 @@
 	//myltiply part of  matrix on vector (for part of a large matrix)
 	void __global__ matrixPartOnVectorMultiplyKernel(rett *partA, rett *b, rett *result, const countt N, const countt partNumber, const countt partSize);
 	//multiply strip matrix on vector
-	void __global__ stripMatrixOnVectorMultiplyKernel(rett *stripA, rett *b, rett *result,const countt N, const countt B);
+	void __global__ bandMatrixOnVectorMultiplyKernel(rett *bandA, rett *b, rett *result,const countt N, const countt B);
 
 //2 функции в связке реализующие скаларное произведение
 	/*

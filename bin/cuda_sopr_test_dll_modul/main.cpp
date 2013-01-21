@@ -49,14 +49,15 @@ int main(int argc, char* argv[]) {
 
         float time = 0;
 
-        typedef float (__stdcall *methodConjugateGradientForStripMatrix) (rett *matrixA, rett *vectorB, rett *vectorX, const countt N, rett eps);
+//        typedef float (__stdcall *methodConjugateGradientForStripMatrix) (rett *matrixA, rett *vectorB, rett *vectorX, const countt N,const countt B, rett eps);
+        typedef float (__stdcall *methodConjugateGradientForStripMatrix) (rett *stripA, rett *b, rett *result,const countt N,const countt B,  rett eps);
         methodConjugateGradientForStripMatrix methodConjugateGradientForStripMatrixEx;
 
         HMODULE lib = NULL;
         lib = LoadLibrary("../sopr.dll");
 	if(lib){
           std::cerr << "Load libr\n";
-          methodConjugateGradientForStripMatrixEx = (methodConjugateGradientForStripMatrix)GetProcAddress(lib,"_methodConjugateGradient@20");
+          methodConjugateGradientForStripMatrixEx = (methodConjugateGradientForStripMatrix)GetProcAddress(lib,"_methodConjugateGradientForBandMatrix@24");
 
           if (methodConjugateGradientForStripMatrixEx){
             std::cerr << "Find func\n";
@@ -71,14 +72,14 @@ int o;
             rett *b = new rett[N];
             rett eps = 0.00001;
             for (int i = 0; i < N; i++ ){
-              x[i] = 1;
+              x[i] = 0.5;
               b[i] = N/(i + 1);
             }
 //std::cin >> o;
-            rett * matrix = &symAo[0];
-            time = methodConjugateGradientForStripMatrixEx(matrix,b,x,N, eps);
-            time = methodConjugateGradientForStripMatrixEx(matrix,b,x,N, eps);
-            time = methodConjugateGradientForStripMatrixEx(matrix,b,x,N, eps);
+            rett * matrix = &symA[0];
+            rett * smatrix = &ssymA[0];
+
+            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
 //std::cin >> o;
             std::cerr << "timeout (ms):" << time << std::endl << std::endl;
             for (int i = 0; i < N; i++){
@@ -87,6 +88,7 @@ int o;
                 p += matrix[i*N + j ]*x[j];
               }
               std::cerr << "b[ " << i << " ] = " << b[i] << " ; b'[ " << i << " ] = " << p << "; x = << " << x[i] << "\n";
+              //std::cerr << "x'[ " << i << " ] = " << p << "; x = << " << x[i] << "\n";
             }
           }
         }

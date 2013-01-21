@@ -51,7 +51,7 @@ extern "C" __declspec(dllexport) float __stdcall getDeviceInfo(DeviceInfo &di){
 }
 
 
-extern "C" __declspec(dllexport) float __stdcall stripMatrixOnVectorMultiply(rett *stripA, rett *b, rett *result,const countt N, const countt B){
+extern "C" __declspec(dllexport) float __stdcall bandMatrixOnVectorMultiply(rett *stripA, rett *b, rett *result,const countt N, const countt B){
 	//allocation memory on device
 	rett *devStripMatrixA;
 		CUDA_CHECK_ERROR(cudaMalloc((void**)&devStripMatrixA, N*(B + 1)*sizeof(rett)));
@@ -74,7 +74,7 @@ extern "C" __declspec(dllexport) float __stdcall stripMatrixOnVectorMultiply(ret
 	dim3 gridSizeForStripMatrixMult = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
 	dim3 blockSizeForStripMatrixMult = dim3(THREADS_PER_BLOCK, 1, 1);
 	//call of kernel
-	stripMatrixOnVectorMultiplyKernel<<< gridSizeForStripMatrixMult, blockSizeForStripMatrixMult >>>(devStripMatrixA, devVector_b, devResult, N, B);
+	bandMatrixOnVectorMultiplyKernel<<< gridSizeForStripMatrixMult, blockSizeForStripMatrixMult >>>(devStripMatrixA, devVector_b, devResult, N, B);
 	//point of end calculation
 	cudaEventRecord(stop, 0);
 
@@ -284,7 +284,7 @@ extern "C" __declspec(dllexport) float __stdcall myltiplyVectorOnScalar(rett *v,
 	return time;
 }
 
-extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForStripMatrix(rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B, rett eps){
+extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandMatrix(rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B, rett eps){
 //allocation memory on device
 	//Alloc for input data
 	rett *devVectorB;
@@ -324,11 +324,13 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForStrip
 	CUDA_CHECK_ERROR(cudaMemcpy(devMatrixA, matrixA, N*(B + 1)*sizeof(rett), cudaMemcpyHostToDevice));
 	CUDA_CHECK_ERROR(cudaMemcpy(devEps, &eps, sizeof(rett), cudaMemcpyHostToDevice));
 	//registration of events
-	cudaEvent_t start;
-    cudaEvent_t stop;
+	cudaEvent_t start,stop,s1,s2,s3;
 	//create events to sync and get timeout
 	CUDA_CHECK_ERROR(cudaEventCreate(&start));
 	CUDA_CHECK_ERROR(cudaEventCreate(&stop));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s1));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s2));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s3));
 	//point of start GPU calc
 	cudaEventRecord(start, 0);
 //Method step 1
@@ -337,66 +339,106 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForStrip
 	dim3 gridSizeStandart = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
 	dim3 blockSizeStandart = dim3(THREADS_PER_BLOCK, 1, 1);
 	//A*X
-	stripMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devVectorX, devVectorTemp1, N, B);
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
+	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devVectorX, devVectorTemp1, N, B);
+	cudaThreadSynchronize();
+	/*cudaEventRecord(s1, 0);
+	cudaEventSynchronize(s1);*/
 	//R0 = B - AX
 	xSubYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorB,devVectorTemp1,devR ,N);
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
+	cudaThreadSynchronize();
+	/*cudaEventRecord(s2, 0);
+	cudaEventSynchronize(s2);*/
 	//P0 = R0
 	copyKernel<<< gridSizeStandart, blockSizeStandart >>>(devR, devP, N);
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
+	cudaThreadSynchronize();
+	/*cudaEventRecord(s3, 0);
+	cudaEventSynchronize(s3);*/
 
 for (countt k = 0; k < N; k++){
 //Method step 2
 	//Qk = A*Pk
-	stripMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devP, devQ, N, B);
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
+	/*cudaEvent_t s4,s5,s6,s7,s8,s9,s10,s11,s12,s13;
+	CUDA_CHECK_ERROR(cudaEventCreate(&s4));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s5));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s6));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s7));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s8));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s9));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s10));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s11));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s12));
+	CUDA_CHECK_ERROR(cudaEventCreate(&s13));*/
+
+	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devP, devQ, N, B);
+	cudaThreadSynchronize();
+	/*cudaEventRecord(s4, 0);
+	cudaEventSynchronize(s4);*/
 	//devAlfaScalar = (Rk,Pk) / (Qk,Pk)
 		// 1. devDividerScalar = (Qk,Pk) //вычисляем знаменатель - далее он еще пригодится для devBetaScalar
 		dim3 gridSizeStep1 = dim3(DEV_META_RESULT_SIZE, 1, 1);
 		dim3 blockSizeStep1 = dim3(THREADS_PER_BLOCK, 1, 1);
 			//call of kernel for step 1 of scalar mult
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devQ, devP, devMetaScalarResult, N);
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
+			cudaThreadSynchronize();
+			/*cudaEventRecord(s5, 0);
+			cudaEventSynchronize(s5);*/
 			//init grid parametres on Step 2
 		dim3 gridSizeStep2 = dim3(1, 1, 1);
 		dim3 blockSizeStep2 = dim3(THREADS_PER_BLOCK, 1, 1);
 			//call of kernel for step 2 of scalar mult
 			reductionSumAtSingleBlockKernel<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devDividerScalar,DEV_META_RESULT_SIZE);
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
+			cudaThreadSynchronize();
+			/*cudaEventRecord(s6, 0);
+			cudaEventSynchronize(s6);*/
 		// 2. devAlfaScalar = (R,P) / devDividerScalar
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devR, devP, devMetaScalarResult, N);
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
+			cudaThreadSynchronize();
+			/*cudaEventRecord(s7, 0);
+			cudaEventSynchronize(s7);*/
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devAlfaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
+			cudaThreadSynchronize();
+			/*cudaEventRecord(s8, 0);
+			cudaEventSynchronize(s8);*/
 	//X = X + devAlfaScalar * P
 		xPlusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorX,devP,devAlfaScalar,devVectorX,N);
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
+		cudaThreadSynchronize();
+		/*cudaEventRecord(s9, 0);
+		cudaEventSynchronize(s9);*/
 	//R = R - devAlfaScalar * Q
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devQ,devAlfaScalar,devR,N);
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
+		cudaThreadSynchronize();
+		/*cudaEventRecord(s10, 0);
+		cudaEventSynchronize(s10);*/
 //Method step 3
 	// |X| < eps ?
 	// devBetaScalar = (R,Q) / (Q,P)
 		// 1. devDividerScalar уже вычислен ранее (devDividerScalar == (Q,P))
 		// 2. devBetaScalar = (R,Q) / devDividerScalar 
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devR, devQ, devMetaScalarResult, N);
-			cudaEventSynchronize(stop);
+			cudaThreadSynchronize();
+			/*cudaEventRecord(s11);
+			cudaEventSynchronize(s11);*/
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devBetaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
-			cudaEventSynchronize(stop);
+			cudaThreadSynchronize();
+			/*cudaEventRecord(s12);
+			cudaEventSynchronize(s12);*/
 	// P = R - devBetaScalar * P (новое направление минимизации)
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devP,devBetaScalar,devP,N);
-		cudaEventSynchronize(stop);
+		cudaThreadSynchronize();
+		/*cudaEventRecord(s13);
+		cudaEventSynchronize(s13);*/
+
+		
+	/*CUDA_CHECK_ERROR(cudaEventDestroy(s4));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s5));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s6));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s7));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s8));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s9));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s10));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s11));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s12));
+	CUDA_CHECK_ERROR(cudaEventDestroy(s13));*/
 }
 
 	//point of end calculation

@@ -25,7 +25,7 @@ extern "C" __declspec(dllexport) float __stdcall matrixPartOnVectorMultiply(rett
 extern "C" __declspec(dllexport) float __stdcall myltiplyVectorOnScalar(rett *v, rett *scalar,rett *result, const countt N);
 
 //advaced math methods
-extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForStripMatrix(rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B, rett eps);
+extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandMatrix(rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B, rett eps);
 
 //info
 extern "C" __declspec(dllexport) float __stdcall getDeviceInfo(DeviceInfo &dc);
