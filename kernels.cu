@@ -15,6 +15,7 @@ void __global__ copyKernel(rett *src, rett *dst, const countt N){
 	}
     if(index < N)
         dst[index] = src[index];
+	__syncthreads();
 }
 
 //error X = F(X) ????
@@ -35,6 +36,7 @@ void __global__ xPlusAlfaYKernel(rett *X, rett *Y, rett* aScalar,rett *result, c
         rett temp =  a*Y[index] + X[index];
 		result[index] = temp;
 	}
+	__syncthreads();
 }
 
 void __global__ xMinusAlfaYKernel(rett *X, rett *Y, rett* aScalar,rett *result, const countt N){
@@ -49,6 +51,7 @@ void __global__ xMinusAlfaYKernel(rett *X, rett *Y, rett* aScalar,rett *result, 
 	}
     if(index < N)
         result[index] = X[index] - a*Y[index];
+	__syncthreads();
 }
 
 void __global__ xSubYKernel(rett *X, rett *Y,rett *result, const countt N){
@@ -62,6 +65,7 @@ void __global__ xSubYKernel(rett *X, rett *Y,rett *result, const countt N){
 	}
     if(index < N)
         result[index] = X[index] - Y[index];
+	__syncthreads();
 }
 
 void __global__ myltiplyVectorOnScalarKernel(rett *v, rett *scalar,rett *result, const countt N){
@@ -75,6 +79,7 @@ void __global__ myltiplyVectorOnScalarKernel(rett *v, rett *scalar,rett *result,
 	}
     if(index < N)
         result[index] = (*scalar)*v[index];
+	__syncthreads();
 }
 
 /*
@@ -114,7 +119,7 @@ void __global__ multiplyVectorsAndPartialSumKernel(rett* a, rett* b, rett* resul
 	//writing to output part
 	if (threadIdx.x == 0)
 		resultAfterReductionGridSize[blockIdx.x] = result[0];
-
+	__syncthreads();
 }
 
 /*
@@ -144,6 +149,7 @@ void __global__ reductionSumAtSingleBlockKernel(rett *input, rett *rScalar, cons
 
 	if (threadIdx.x == 0)
 		rScalar[0] = result[0];
+	__syncthreads();
 }
 
 /*
@@ -173,8 +179,9 @@ void __global__ reductionSumAtSingleBlockSpecialKernelWithDivide(rett *input, re
 	}
 
 	if (threadIdx.x == 0){
-		(*rScalar) = result[0]/(*divScalar);
+		(*rScalar) = result[0]*pow((*divScalar),-1);
 	}
+	__syncthreads();
 }
 
 void __global__ bandMatrixOnVectorMultiplyKernel(rett *bandA, rett *b, rett *result,const countt N, const countt B){
@@ -191,6 +198,7 @@ void __global__ bandMatrixOnVectorMultiplyKernel(rett *bandA, rett *b, rett *res
 
 		result[I] = blockResult[threadIdx.x];
 	}
+	__syncthreads();
 }
 
 void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, const countt N){
@@ -224,6 +232,7 @@ void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, con
 		}
 		__syncthreads();
 	}
+	__syncthreads();
 }
 
 /*
@@ -268,4 +277,5 @@ void __global__ matrixPartOnVectorMultiplyKernel(rett *partA, rett *b, rett *res
 		}
 		__syncthreads();
 	}
+	__syncthreads();
 }

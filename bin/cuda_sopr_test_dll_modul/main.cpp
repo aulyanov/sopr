@@ -4,6 +4,7 @@
 #include <iostream>
 #include <Math.h>
 #include <stdlib.h>
+#include "windows.h"
 
 
 #pragma hdrstop
@@ -80,8 +81,14 @@ int o;
             rett * smatrix = &ssymA[0];
 
             time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
+            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
+
 //std::cin >> o;
             std::cerr << "timeout (ms):" << time << std::endl << std::endl;
+            
+            //for (int k = 0; k < N; k++)
+            //std::cout << x[0] << endl;
+
             for (int i = 0; i < N; i++){
               rett p = 0;
               for (int j = 0; j < N; j++){
@@ -93,7 +100,7 @@ int o;
           }
         }
         FreeLibrary(lib);
-        
+
 	system("PAUSE");
         return 0;
 }

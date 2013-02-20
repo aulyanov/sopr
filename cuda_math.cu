@@ -341,38 +341,18 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandM
 	//A*X
 	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devVectorX, devVectorTemp1, N, B);
 	cudaThreadSynchronize();
-	/*cudaEventRecord(s1, 0);
-	cudaEventSynchronize(s1);*/
 	//R0 = B - AX
 	xSubYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorB,devVectorTemp1,devR ,N);
 	cudaThreadSynchronize();
-	/*cudaEventRecord(s2, 0);
-	cudaEventSynchronize(s2);*/
 	//P0 = R0
 	copyKernel<<< gridSizeStandart, blockSizeStandart >>>(devR, devP, N);
 	cudaThreadSynchronize();
-	/*cudaEventRecord(s3, 0);
-	cudaEventSynchronize(s3);*/
 
 for (countt k = 0; k < N; k++){
 //Method step 2
-	//Qk = A*Pk
-	/*cudaEvent_t s4,s5,s6,s7,s8,s9,s10,s11,s12,s13;
-	CUDA_CHECK_ERROR(cudaEventCreate(&s4));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s5));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s6));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s7));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s8));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s9));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s10));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s11));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s12));
-	CUDA_CHECK_ERROR(cudaEventCreate(&s13));*/
 
 	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devP, devQ, N, B);
 	cudaThreadSynchronize();
-	/*cudaEventRecord(s4, 0);
-	cudaEventSynchronize(s4);*/
 	//devAlfaScalar = (Rk,Pk) / (Qk,Pk)
 		// 1. devDividerScalar = (Qk,Pk) //вычисляем знаменатель - далее он еще пригодится для devBetaScalar
 		dim3 gridSizeStep1 = dim3(DEV_META_RESULT_SIZE, 1, 1);
@@ -380,35 +360,23 @@ for (countt k = 0; k < N; k++){
 			//call of kernel for step 1 of scalar mult
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devQ, devP, devMetaScalarResult, N);
 			cudaThreadSynchronize();
-			/*cudaEventRecord(s5, 0);
-			cudaEventSynchronize(s5);*/
 			//init grid parametres on Step 2
 		dim3 gridSizeStep2 = dim3(1, 1, 1);
 		dim3 blockSizeStep2 = dim3(THREADS_PER_BLOCK, 1, 1);
 			//call of kernel for step 2 of scalar mult
 			reductionSumAtSingleBlockKernel<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devDividerScalar,DEV_META_RESULT_SIZE);
 			cudaThreadSynchronize();
-			/*cudaEventRecord(s6, 0);
-			cudaEventSynchronize(s6);*/
 		// 2. devAlfaScalar = (R,P) / devDividerScalar
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devR, devP, devMetaScalarResult, N);
 			cudaThreadSynchronize();
-			/*cudaEventRecord(s7, 0);
-			cudaEventSynchronize(s7);*/
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devAlfaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
 			cudaThreadSynchronize();
-			/*cudaEventRecord(s8, 0);
-			cudaEventSynchronize(s8);*/
 	//X = X + devAlfaScalar * P
 		xPlusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorX,devP,devAlfaScalar,devVectorX,N);
 		cudaThreadSynchronize();
-		/*cudaEventRecord(s9, 0);
-		cudaEventSynchronize(s9);*/
 	//R = R - devAlfaScalar * Q
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devQ,devAlfaScalar,devR,N);
 		cudaThreadSynchronize();
-		/*cudaEventRecord(s10, 0);
-		cudaEventSynchronize(s10);*/
 //Method step 3
 	// |X| < eps ?
 	// devBetaScalar = (R,Q) / (Q,P)
@@ -416,29 +384,11 @@ for (countt k = 0; k < N; k++){
 		// 2. devBetaScalar = (R,Q) / devDividerScalar 
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devR, devQ, devMetaScalarResult, N);
 			cudaThreadSynchronize();
-			/*cudaEventRecord(s11);
-			cudaEventSynchronize(s11);*/
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devBetaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
 			cudaThreadSynchronize();
-			/*cudaEventRecord(s12);
-			cudaEventSynchronize(s12);*/
 	// P = R - devBetaScalar * P (новое направление минимизации)
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devP,devBetaScalar,devP,N);
 		cudaThreadSynchronize();
-		/*cudaEventRecord(s13);
-		cudaEventSynchronize(s13);*/
-
-		
-	/*CUDA_CHECK_ERROR(cudaEventDestroy(s4));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s5));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s6));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s7));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s8));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s9));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s10));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s11));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s12));
-	CUDA_CHECK_ERROR(cudaEventDestroy(s13));*/
 }
 
 	//point of end calculation
@@ -521,42 +471,55 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradient(rett *m
 	dim3 blockSizeStandart = dim3(THREADS_PER_BLOCK, 1, 1);
 	//A*X
 	matrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devVectorX, devVectorTemp1, N);
+	cudaThreadSynchronize();
 	//R0 = B - AX
 	xSubYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorB,devVectorTemp1,devR ,N);
+	cudaThreadSynchronize();
 	//P0 = R0
 	copyKernel<<< gridSizeStandart, blockSizeStandart >>>(devR, devP, N);
+	cudaThreadSynchronize();
 
 for (countt k = 0; k < N; k++){
 //Method step 2
 	//Qk = A*Pk
 	matrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devP, devQ, N);
+	cudaThreadSynchronize();
 	//devAlfaScalar = (Rk,Pk) / (Qk,Pk)
 		// 1. devDividerScalar = (Qk,Pk) //вычисляем знаменатель - далее он еще пригодится для devBetaScalar
 		dim3 gridSizeStep1 = dim3(DEV_META_RESULT_SIZE, 1, 1);
 		dim3 blockSizeStep1 = dim3(THREADS_PER_BLOCK, 1, 1);
 			//call of kernel for step 1 of scalar mult
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devQ, devP, devMetaScalarResult, N);
+			cudaThreadSynchronize();
 			//init grid parametres on Step 2
 		dim3 gridSizeStep2 = dim3(1, 1, 1);
 		dim3 blockSizeStep2 = dim3(THREADS_PER_BLOCK, 1, 1);
 			//call of kernel for step 2 of scalar mult
 			reductionSumAtSingleBlockKernel<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devDividerScalar,DEV_META_RESULT_SIZE);
+			cudaThreadSynchronize();
 		// 2. devAlfaScalar = (R,P) / devDividerScalar
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devR, devP, devMetaScalarResult, N);
+			cudaThreadSynchronize();
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devAlfaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
+			cudaThreadSynchronize();
 	//X = X + devAlfaScalar * P
 		xPlusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorX,devP,devAlfaScalar,devVectorX,N);
+		cudaThreadSynchronize();
 	//R = R - devAlfaScalar * Q
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devQ,devAlfaScalar,devR,N);
+		cudaThreadSynchronize();
 //Method step 3
 	// |X| < eps ?
 	// devBetaScalar = (R,Q) / (Q,P)
 		// 1. devDividerScalar уже вычислен ранее (devDividerScalar == (Q,P))
 		// 2. devBetaScalar = (R,Q) / devDividerScalar 
 			multiplyVectorsAndPartialSumKernel<<< gridSizeStep1, blockSizeStep1 >>>(devR, devQ, devMetaScalarResult, N);
+			cudaThreadSynchronize();
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devBetaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
+			cudaThreadSynchronize();
 	// P = R - devBetaScalar * P (новое направление минимизации)
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devP,devBetaScalar,devP,N);
+		cudaThreadSynchronize();
 }
 
 	//point of end calculation
