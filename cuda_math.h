@@ -18,13 +18,23 @@ if (err != cudaSuccess) {          \
 
 #endif
 
-//Elementary math function
+//Elementary math proc for vectors
 extern "C" __declspec(dllexport) float __stdcall skalarMultiply(rett *a, rett *b, rett *result,const countt N);
-extern "C" __declspec(dllexport) float __stdcall matrixOnVectorMultiply(rett *A, rett *b, rett *result, const countt N);
-extern "C" __declspec(dllexport) float __stdcall matrixPartOnVectorMultiply(rett *A, rett *b, rett *result,const countt N, const countt partNumber, const countt partSize);
 extern "C" __declspec(dllexport) float __stdcall myltiplyVectorOnScalar(rett *v, rett *scalar,rett *result, const countt N);
 
-//advaced math methods
+//Elementary math proc for matrix
+extern "C" __declspec(dllexport) float __stdcall bandMatrixOnVectorMultiply(rett *stripA, rett *b, rett *result,const countt N, const countt B);
+extern "C" __declspec(dllexport) float __stdcall matrixOnVectorMultiply(rett *A, rett *b, rett *result,const countt N);
+extern "C" __declspec(dllexport) float __stdcall matrixPartOnVectorMultiply(rett *A, rett *b, rett *result,const countt N, const countt partNumber, const countt partSize);
+
+//extern "C" __declspec(dllexport) float __stdcall matrixOnMatrixMultiply(rett* A, rett* B, const countt N);
+
+/* TODO:
+
+extern "C" __declspec(dllexport) float __stdcall bandMatrixOnBandMatrix
+*/
+
+//advaced math procedures
 extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandMatrix(rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B, rett eps);
 
 //info

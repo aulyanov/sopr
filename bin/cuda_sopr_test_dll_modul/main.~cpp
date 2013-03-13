@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 		0.0 ,  0.0 ,  0.0 ,  0.0 ,   0.0 , 0.0 , 80.0
 	};
 
-        rett ssymA[7*3] = {
+        rett ssymA[] = {
 		0.0 ,  0.0 , 9.0 ,
                 0.0 ,  0.0 , 11.0 ,
                 0.0 ,  2.0 , 10.0 ,
@@ -50,17 +50,17 @@ int main(int argc, char* argv[]) {
 
         float time = 0;
 
-//        typedef float (__stdcall *methodConjugateGradientForStripMatrix) (rett *matrixA, rett *vectorB, rett *vectorX, const countt N,const countt B, rett eps);
-        typedef float (__stdcall *methodConjugateGradientForStripMatrix) (rett *stripA, rett *b, rett *result,const countt N,const countt B,  rett eps);
-        methodConjugateGradientForStripMatrix methodConjugateGradientForStripMatrixEx;
+        typedef float (__stdcall *methodConjugateGradientForBandMatrix) (rett *matrixA, rett *vectorB, rett *vectorX, const countt N, const countt B, rett eps);
+        //typedef float (__stdcall *bandMatrixOnVectorMultiply) (rett *stripA, rett *b, rett *result,const countt N, const countt B);
+        methodConjugateGradientForBandMatrix methodConjugateGradientForBandMatrixEx;
 
         HMODULE lib = NULL;
         lib = LoadLibrary("../sopr.dll");
 	if(lib){
           std::cerr << "Load libr\n";
-          methodConjugateGradientForStripMatrixEx = (methodConjugateGradientForStripMatrix)GetProcAddress(lib,"_methodConjugateGradientForBandMatrix@24");
+          methodConjugateGradientForBandMatrixEx = (methodConjugateGradientForBandMatrix)GetProcAddress(lib,"_methodConjugateGradientForBandMatrix@24");
 
-          if (methodConjugateGradientForStripMatrixEx){
+          if (methodConjugateGradientForBandMatrixEx){
             std::cerr << "Find func\n";
 
 int o;
@@ -80,40 +80,12 @@ int o;
             rett * matrix = &symA[0];
             rett * smatrix = &ssymA[0];
 
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
-            time = methodConjugateGradientForStripMatrixEx(smatrix,b,x,N,B,eps);
+            //time = bandMatrixOnVectorMultiplyEx(smatrix,b,x,N,B);
+            time = methodConjugateGradientForBandMatrix(smatrix,b,x,N,B,eps);
 
 //std::cin >> o;
             std::cerr << "timeout (ms):" << time << std::endl << std::endl;
-            
+
             //for (int k = 0; k < N; k++)
             //std::cout << x[0] << endl;
 
@@ -125,6 +97,18 @@ int o;
               std::cerr << "b[ " << i << " ] = " << b[i] << " ; b'[ " << i << " ] = " << p << "; x = << " << x[i] << "\n";
               //std::cerr << "x'[ " << i << " ] = " << p << "; x = << " << x[i] << "\n";
             }
+
+/*
+            rett *test = new rett[N];
+            for (int i = 0; i < N; i++){
+              test[i] = 0;
+              for (int j = 0; j < N; j++){
+                test[i] += symA[i*N + j]*b[j];
+              }
+              cout << "test:" << test[i] << " -> x:" << x[i] << endl;
+            }
+*/
+            
           }
         }
         FreeLibrary(lib);

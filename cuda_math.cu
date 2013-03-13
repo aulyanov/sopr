@@ -338,9 +338,11 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandM
 	//init grid parametres
 	dim3 gridSizeStandart = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
 	dim3 blockSizeStandart = dim3(THREADS_PER_BLOCK, 1, 1);
+
 	//A*X
 	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devVectorX, devVectorTemp1, N, B);
 	cudaThreadSynchronize();
+
 	//R0 = B - AX
 	xSubYKernel<<< gridSizeStandart, blockSizeStandart >>>(devVectorB,devVectorTemp1,devR ,N);
 	cudaThreadSynchronize();
@@ -350,9 +352,11 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandM
 
 for (countt k = 0; k < N; k++){
 //Method step 2
+	printf("-> Step#%i\n",k);
 
 	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devP, devQ, N, B);
 	cudaThreadSynchronize();
+
 	//devAlfaScalar = (Rk,Pk) / (Qk,Pk)
 		// 1. devDividerScalar = (Qk,Pk) //вычисляем знаменатель - далее он еще пригодится для devBetaScalar
 		dim3 gridSizeStep1 = dim3(DEV_META_RESULT_SIZE, 1, 1);
@@ -386,6 +390,13 @@ for (countt k = 0; k < N; k++){
 			cudaThreadSynchronize();
 			reductionSumAtSingleBlockSpecialKernelWithDivide<<< gridSizeStep2, blockSizeStep2 >>>(devMetaScalarResult,devBetaScalar,DEV_META_RESULT_SIZE,devDividerScalar);
 			cudaThreadSynchronize();
+
+			/*CUDA_CHECK_ERROR(cudaMemcpy(ptest, devBetaScalar, sizeof(rett), cudaMemcpyDeviceToHost))
+				printf("on step#%i: devBetaScalar: %f\n",k,(*ptest));
+			
+			CUDA_CHECK_ERROR(cudaMemcpy(ptest, devDividerScalar, sizeof(rett), cudaMemcpyDeviceToHost))
+				printf("on step#%i: devDividerScalar: %f\n",k,(*ptest));
+			*/
 	// P = R - devBetaScalar * P (новое направление минимизации)
 		xMinusAlfaYKernel<<< gridSizeStandart, blockSizeStandart >>>(devR,devP,devBetaScalar,devP,N);
 		cudaThreadSynchronize();

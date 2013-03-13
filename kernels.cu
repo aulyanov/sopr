@@ -179,11 +179,13 @@ void __global__ reductionSumAtSingleBlockSpecialKernelWithDivide(rett *input, re
 	}
 
 	if (threadIdx.x == 0){
-		(*rScalar) = result[0]*pow((*divScalar),-1);
+		(*rScalar) = (*result)/(*divScalar);//*pow((*divScalar),-1);
 	}
 	__syncthreads();
 }
 
+
+// TODO: fix NAN
 void __global__ bandMatrixOnVectorMultiplyKernel(rett *bandA, rett *b, rett *result,const countt N, const countt B){
 	rett __shared__ blockResult[THREADS_PER_BLOCK];
 	countt BB = B + 1;
@@ -191,7 +193,8 @@ void __global__ bandMatrixOnVectorMultiplyKernel(rett *bandA, rett *b, rett *res
 	for (countt I = blockIdx.x*(THREADS_PER_BLOCK) + threadIdx.x; I < N; I += globalLimit) {
 		blockResult[threadIdx.x] = bandA[I*BB + B]*b[I];
 		for (countt k = 1; k <= B; k++){
-			blockResult[threadIdx.x] += bandA[I*BB + B - k]*b[I - k];
+			if ( ( (I - k) < N ) && ( (I*BB + B - k) < N*(B+1) ) )
+				blockResult[threadIdx.x] += bandA[I*BB + B - k]*b[I - k];//!
 			if ((I + k) < N)
 				blockResult[threadIdx.x] += bandA[(I + k)*BB + B - k]*b[I + k];
 		}
@@ -233,6 +236,10 @@ void __global__ matrixOnVectorMultiplyKernel(rett *A, rett *b, rett *result, con
 		__syncthreads();
 	}
 	__syncthreads();
+}
+
+extern "C" __declspec(dllexport) float __stdcall matrixOnMatrixMultiply(rett* A, rett* B, const countt N){
+	return 0;
 }
 
 /*
