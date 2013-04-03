@@ -50,6 +50,53 @@ extern "C" __declspec(dllexport) float __stdcall getDeviceInfo(DeviceInfo &di){
     return 0;
 }
 
+extern "C" __declspec(dllexport) float __stdcall matrixOnMatrixMultiply(rett* A, rett* B, rett* R, const countt N){
+	//allocation memory on device
+	rett *devMatrixA;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devMatrixA, N*N*sizeof(rett)));
+	rett *devMatrixB;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devMatrixB, N*N*sizeof(rett)));
+	rett *devMatrixR;
+		CUDA_CHECK_ERROR(cudaMalloc((void**)&devMatrixR, N*N*sizeof(rett)));
+	//initialization data on device
+	CUDA_CHECK_ERROR(cudaMemcpy(devMatrixA, A, N*N*sizeof(rett), cudaMemcpyHostToDevice));
+	CUDA_CHECK_ERROR(cudaMemcpy(devMatrixB, B, N*N*sizeof(rett), cudaMemcpyHostToDevice));
+	//registration of events
+	cudaEvent_t start;
+    cudaEvent_t stop;
+	//create events to sync and get timeout
+	CUDA_CHECK_ERROR(cudaEventCreate(&start));
+	CUDA_CHECK_ERROR(cudaEventCreate(&stop));
+	//point of start GPU calc
+	cudaEventRecord(start, 0);
+	//init grid parametres
+	dim3 gridSizeForStripMatrixMult = dim3(MAX_BLOCKS/THREADS_PER_BLOCK, 1, 1);
+	dim3 blockSizeForStripMatrixMult = dim3(THREADS_PER_BLOCK, 1, 1);
+
+	//call kernel
+	//matrixOnMatrixMultiplyKernel<<<  gridSizeForStripMatrixMult, blockSizeForStripMatrixMult  >>>(devMatrixA, devMatrixB, devMatrixR, N);
+	dim3 threads ( THREADS_PER_SQUARE_BLOCK, THREADS_PER_SQUARE_BLOCK );
+    dim3 blocks  ( (N + THREADS_PER_SQUARE_BLOCK - 1) / THREADS_PER_SQUARE_BLOCK, (N + THREADS_PER_SQUARE_BLOCK - 1) / THREADS_PER_SQUARE_BLOCK);
+	matrixOnMatrixMultiplyKernel1<<<blocks, threads>>> ( devMatrixA, devMatrixB, N, devMatrixR );
+
+	cudaEventRecord(stop, 0);
+
+	float time = 0;
+	//sunc all threads
+    cudaEventSynchronize(stop);
+	//get execution time
+    cudaEventElapsedTime(&time, start, stop);
+	//copy from device
+	CUDA_CHECK_ERROR(cudaMemcpy(R, devMatrixR, sizeof(rett)*N*N, cudaMemcpyDeviceToHost));
+	//free allocated GPU memory
+	CUDA_CHECK_ERROR(cudaFree(devMatrixA));
+	CUDA_CHECK_ERROR(cudaFree(devMatrixB));
+	CUDA_CHECK_ERROR(cudaFree(devMatrixR));
+	//destroy of events
+	CUDA_CHECK_ERROR(cudaEventDestroy(start));
+	CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+	return time;
+}
 
 extern "C" __declspec(dllexport) float __stdcall bandMatrixOnVectorMultiply(rett *stripA, rett *b, rett *result,const countt N, const countt B){
 	//allocation memory on device
@@ -352,7 +399,7 @@ extern "C" __declspec(dllexport) float __stdcall methodConjugateGradientForBandM
 
 for (countt k = 0; k < N; k++){
 //Method step 2
-	printf("-> Step#%i\n",k);
+	//printf("-> Step#%i\n",k);
 
 	bandMatrixOnVectorMultiplyKernel<<< gridSizeStandart, blockSizeStandart >>>(devMatrixA, devP, devQ, N, B);
 	cudaThreadSynchronize();

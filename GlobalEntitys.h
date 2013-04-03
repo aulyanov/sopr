@@ -11,11 +11,13 @@
 
 //machine dependent constants
 #define SHARED_MEMORY_SIZE_BYTE 48*1024
+
 #define THREADS_PER_BLOCK 256 // only %2 == 0, max=1024
+#define THREADS_PER_SQUARE_BLOCK 16
+
 #define MAX_BLOCKS 65536
 #define TOTAL_RAM_BYTE 1.5*1024*1024*1024
 #define MAX_USED_GRAM_BYTE 1024*1024*1024
-
 
 class DeviceInfo{
 public:

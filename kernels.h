@@ -34,3 +34,6 @@ void __global__ reductionSumAtSingleBlockKernel(rett *input, rett *rScalar, cons
 //Специальное ядро для скаларного произведения (второй шаг)
 //Делит результат суммирования вектора частичных сумм на divScalar
 void __global__ reductionSumAtSingleBlockSpecialKernelWithDivide(rett *input, rett *rScalar, const countt n, rett *divScalar);
+
+void __global__ matrixOnMatrixMultiplyKernel(rett* a, rett* b, rett* c, const countt N);
+__global__ void matrixOnMatrixMultiplyKernel1( float * a, float * b, int n, float * c );

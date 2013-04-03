@@ -286,3 +286,107 @@ void __global__ matrixPartOnVectorMultiplyKernel(rett *partA, rett *b, rett *res
 	}
 	__syncthreads();
 }
+
+// peremnogenie obichnih matric
+
+void __global__ matrixOnMatrixMultiplyKernel(rett* a, rett* b, rett* c, const countt N){
+	__shared__ rett strA[THREADS_PER_BLOCK];
+	__shared__ rett colB[THREADS_PER_BLOCK];
+	__shared__ rett resToReduction[THREADS_PER_BLOCK];
+	
+	countt globalLimit = blockDim.x*gridDim.x;
+
+	for (countt colIndex = blockIdx.x; colIndex < N; colIndex += blockDim.x){
+		for (countt rowIndex = 0; rowIndex < N; rowIndex ++){
+			//rowIndex, colIndex
+			//mult row on col
+			resToReduction[threadIdx.x] = 0;
+
+			for (countt runThIndex = threadIdx.x; runThIndex < N; runThIndex += blockDim.x ){
+				strA[runThIndex] = a[rowIndex*N + runThIndex];// copy matrix string
+				colB[runThIndex] = b[runThIndex*N + colIndex];// copy matrix column with run index - j
+				resToReduction[threadIdx.x] += strA[runThIndex]*colB[runThIndex];
+			}
+			__syncthreads();
+			//reduction -->
+
+			int n = blockDim.x/2;
+			while(n != 0){
+				if (threadIdx.x < n){
+					resToReduction[threadIdx.x] += resToReduction[threadIdx.x + n];
+				}
+				__syncthreads();
+				n/=2;
+			}
+
+			if (threadIdx.x == 0)
+				c[rowIndex*N + colIndex] = resToReduction[0];
+		}
+	}
+}
+
+__global__ void matrixOnMatrixMultiplyKernel1 ( float * a, float * b, int n, float * c ){
+    int bx = blockIdx.x;        // block index
+    int by = blockIdx.y;
+
+    int tx = threadIdx.x;       // thread index
+    int ty = threadIdx.y;
+
+	int dp = THREADS_PER_SQUARE_BLOCK - (THREADS_PER_SQUARE_BLOCK*gridDim.x - n);
+
+    int aBegin = n*THREADS_PER_SQUARE_BLOCK*by;
+    int aStep = THREADS_PER_SQUARE_BLOCK;
+
+	int bBegin = THREADS_PER_SQUARE_BLOCK*bx;
+    int bStep = THREADS_PER_SQUARE_BLOCK * n;
+
+	int aEnd = aBegin + n - 1;
+
+    float sum = 0.0f;           // computed subelement
+    for ( int ia = aBegin, ib = bBegin, p = 0; ia <= aEnd; ia += aStep, ib += bStep, p ++){
+        __shared__ float as [THREADS_PER_SQUARE_BLOCK][THREADS_PER_SQUARE_BLOCK];
+        __shared__ float bs [THREADS_PER_SQUARE_BLOCK][THREADS_PER_SQUARE_BLOCK];
+
+		if (p == gridDim.x - 1){
+			if (tx < dp){
+				as[ty][tx] = a[ia + n*ty + tx];
+			}else{
+				as[ty][tx] = 0;
+			}
+			if (ty < dp){
+				bs[ty][tx] = b[ib + n*ty + tx];
+			}else{
+				bs[ty][tx] = 0;
+			}
+		}else{
+			as[ty][tx] = a[ia + n*ty + tx];
+			bs[ty][tx] = b[ib + n*ty + tx];
+		}
+
+        __syncthreads();
+        for ( int k = 0; k < THREADS_PER_SQUARE_BLOCK; k++ )
+            sum += as[ty][k]*bs[k][tx];
+        __syncthreads();
+    }
+    int ic = n * THREADS_PER_SQUARE_BLOCK * by + THREADS_PER_SQUARE_BLOCK * bx;
+
+	if ( bx == gridDim.x - 1 && by != gridDim.y - 1 ){
+		if (tx < dp){
+			c [ic + n*ty + tx] = sum;
+		}
+	}
+	if ( bx != gridDim.x - 1 && by == gridDim.y - 1 ){
+		if (ty < dp){
+			c [ic + n*ty + tx] = sum;
+		}
+	}
+	if ( bx == gridDim.x - 1 && by == gridDim.y - 1 ){
+		if (tx < dp && ty < dp){
+			c [ic + n*ty + tx] = sum;
+		}
+	}
+
+	if ( bx != gridDim.x - 1 && by != gridDim.y - 1 ){
+		c [ic + n*ty + tx] = sum;
+	}
+}
